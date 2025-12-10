@@ -13,7 +13,7 @@ app.use(express.static("public"));
 
 /*
 ========================================
-  API AMBIL INFO VIDEO (ANTI RESOLUSI DOBEL)
+   API AMBIL INFO VIDEO (ANTI DOBEL)
 ========================================
 */
 app.post("/api/info", (req, res) => {
@@ -33,15 +33,12 @@ app.post("/api/info", (req, res) => {
 
     const info = JSON.parse(stdout);
 
-    // -------------------------
-    // ANTI RESOLUSI DOBEL
-    // -------------------------
+    // Anti resolusi dobel
     const uniqueFormats = {};
     info.formats.forEach(f => {
       if (f.height && !uniqueFormats[f.height]) {
         uniqueFormats[f.height] = {
-          resolution: f.height + "p",
-          format_id: f.format_id
+          resolution: f.height + "p"
         };
       }
     });
@@ -52,14 +49,14 @@ app.post("/api/info", (req, res) => {
       success: true,
       title: info.title,
       thumbnail: info.thumbnail,
-      formats: formats   // Sudah bersih, tanpa dobel
+      formats: formats
     });
   });
 });
 
 /*
 ========================================
-  DOWNLOAD MP4 (100% PLAYABLE FIX)
+   DOWNLOAD MP4 (FINAL PLAYABLE FIX)
 ========================================
 */
 app.get("/download", async (req, res) => {
@@ -69,7 +66,7 @@ app.get("/download", async (req, res) => {
   const filename = uuidv4() + ".mp4";
   const filepath = path.join(__dirname, filename);
 
-  // Format aman: H.264 + AAC → PLAYABLE DI SEMUA DEVICE
+  // Format aman untuk SEMUA sosmed (TikTok, IG, FB, YT)
   const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" \
   --merge-output-format mp4 \
   --user-agent "Mozilla/5.0" \
@@ -82,14 +79,14 @@ app.get("/download", async (req, res) => {
     }
 
     res.download(filepath, "video.mp4", () => {
-      fs.unlink(filepath, () => {}); // hapus file setelah dikirim
+      fs.unlink(filepath, () => {});
     });
   });
 });
 
 /*
 ========================================
-  DOWNLOAD MP3
+   DOWNLOAD MP3 (AMAN)
 ========================================
 */
 app.get("/download-mp3", (req, res) => {
@@ -117,7 +114,7 @@ app.get("/download-mp3", (req, res) => {
 
 /*
 ========================================
-  LOAD HALAMAN HTML
+   LOAD UI
 ========================================
 */
 app.get("*", (req, res) => {
