@@ -1,17 +1,18 @@
-FROM node:18-bullseye
+FROM python:3.11-slim
 
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    python3 \
-    python3-pip \
-    && pip3 install -U yt-dlp
+# Install dependencies
+RUN apt-get update && apt-get install -y nodejs npm ffmpeg curl
 
 WORKDIR /app
 
-COPY package.json /app/
+COPY . .
+
+# Install Python packages
+RUN pip install -U yt-dlp
+
+# Install Node dependencies
 RUN npm install --production
 
-COPY . /app
-
 EXPOSE 3000
+
 CMD ["node", "server.js"]
