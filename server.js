@@ -9,25 +9,31 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// AMBIL INFO VIDEO + LIST RESOLUSI
+/*
+========================================
+  API AMBIL INFO VIDEO
+========================================
+*/
 app.post("/api/info", (req, res) => {
   const { url } = req.body;
   if (!url) return res.json({ success: false, message: "URL tidak ada" });
 
   const cmd = `yt-dlp -J --user-agent "Mozilla/5.0" "${url}"`;
 
-  exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, (err, stdout, stderr) => {
+  exec(cmd, { maxBuffer: 1024 * 1024 * 200 }, (err, stdout, stderr) => {
     if (err || stderr.includes("ERROR")) {
       return res.json({
         success: false,
-        message: "Gagal ambil info",
+        message: "Gagal ambil info video",
         debug: stderr
       });
     }
 
     const info = JSON.parse(stdout);
+
+    // Ambil daftar resolusi (opsional)
     const formats = info.formats
-      .filter(f => f.height) // hanya video
+      .filter(f => f.height)
       .map(f => ({
         resolution: f.height + "p",
         format_id: f.format_id
@@ -42,39 +48,56 @@ app.post("/api/info", (req, res) => {
   });
 });
 
-// DOWNLOAD MP4 BERDASARKAN RESOLUSI
+/*
+========================================
+  DOWNLOAD MP4 (AMAN UNTUK SEMUA DEVICE)
+========================================
+*/
 app.get("/download", (req, res) => {
-  const { url, format_id } = req.query;
+  const videoUrl = req.query.url;
+  if (!videoUrl) return res.send("URL tidak ditemukan");
 
-  if (!url || !format_id) {
-    return res.send("URL / Format ID tidak ditemukan");
-  }
-
-  const command = `yt-dlp -f ${format_id} --user-agent "Mozilla/5.0" -o - "${url}"`;
+  // Format aman secara universal: MP4, H.264, AAC
+  const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" \
+    --merge-output-format mp4 \
+    --user-agent "Mozilla/5.0" \
+    -o - "${videoUrl}"`;
 
   res.setHeader("Content-Type", "video/mp4");
-  res.setHeader("Content-Disposition", `attachment; filename=video-${format_id}.mp4`);
+  res.setHeader("Content-Disposition", "attachment; filename=video.mp4");
 
-  const child = exec(command, { maxBuffer: 1024 * 1024 * 50 });
+  const child = exec(command, { maxBuffer: 1024 * 1024 * 300 });
   child.stdout.pipe(res);
+
+  child.stderr.on("data", (data) => {
+    console.log("Download Error:", data.toString());
+  });
 });
 
-// DOWNLOAD MP3 AUDIO SAJA
+/*
+========================================
+  DOWNLOAD MP3 SAJA
+========================================
+*/
 app.get("/download-mp3", (req, res) => {
   const { url } = req.query;
-
   if (!url) return res.send("URL tidak ditemukan");
 
-  const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 --user-agent "Mozilla/5.0" -o - "${url}"`;
+  const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 \
+    --user-agent "Mozilla/5.0" -o - "${url}"`;
 
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Content-Disposition", "attachment; filename=audio.mp3");
 
-  const child = exec(command, { maxBuffer: 1024 * 1024 * 50 });
+  const child = exec(command, { maxBuffer: 1024 * 1024 * 200 });
   child.stdout.pipe(res);
 });
 
-// Serve halaman utama
+/*
+========================================
+  LOAD HALAMAN HTML
+========================================
+*/
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
