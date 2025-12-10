@@ -9,31 +9,53 @@ const PORT = process.env.PORT || 3000;
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// Endpoint download
-app.post("/api/download", (req, res) => {
+// API untuk ambil info & validasi URL
+app.post("/api/info", (req, res) => {
   const { url } = req.body;
-  if (!url) return res.json({ success: false, message: "URL not provided" });
+  if (!url) {
+    return res.json({ success: false, message: "URL tidak ada" });
+  }
 
-  const command = `yt-dlp -f best --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o - "${url}"`;
+  const cmd = `yt-dlp --dump-json "${url}"`;
 
-  exec(command, { maxBuffer: 1024 * 1024 * 50 }, (err, stdout, stderr) => {
+  exec(cmd, { maxBuffer: 1024 * 1024 * 50 }, (err, stdout, stderr) => {
     if (err || stderr.includes("ERROR")) {
       return res.json({
         success: false,
-        message: "Download failed",
+        message: "Gagal mengambil data",
         debug: stderr
       });
     }
 
+    const info = JSON.parse(stdout);
     res.json({
       success: true,
-      message: "Download success",
-      data: "Video ready to download"
+      title: info.title,
+      thumbnail: info.thumbnail
     });
   });
 });
 
-// Serve index.html
+// STREAM VIDEO (MAIN FUNCTION)
+app.get("/download", (req, res) => {
+  const videoUrl = req.query.url;
+  if (!videoUrl) return res.send("URL tidak ditemukan");
+
+  const command = `yt-dlp -f best --user-agent "Mozilla/5.0" -o - "${videoUrl}"`;
+
+  res.setHeader("Content-Type", "video/mp4");
+  res.setHeader("Content-Disposition", "attachment; filename=video.mp4");
+
+  const child = exec(command, { maxBuffer: 1024 * 1024 * 50 });
+
+  child.stdout.pipe(res);
+
+  child.stderr.on("data", (data) => {
+    console.log("DL ERROR:", data.toString());
+  });
+});
+
+// Serve UI
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
