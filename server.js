@@ -1,40 +1,41 @@
 const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const morgan = require("morgan");
 const path = require("path");
-const { downloadWithYtdlp } = require("./downloader");
-const { v4: uuidv4 } = require("uuid");
+const bodyParser = require("body-parser");
+const { exec } = require("child_process");
 
 const app = express();
-app.use(bodyParser.json({ limit: "50mb" }));
-app.use(cors());
-app.use(morgan("tiny"));
+const PORT = process.env.PORT || 3000;
 
-app.use("/", express.static(path.join(__dirname, "public")));
-app.use("/downloads", express.static(path.join(__dirname, "downloads")));
+app.use(bodyParser.json());
+app.use(express.static("public"));
 
-app.post("/api/download", async (req, res) => {
-  try {
-    const { url, format = "mp4" } = req.body;
-    if (!url) return res.json({ success: false, message: "Missing URL" });
+// Endpoint download
+app.post("/api/download", (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.json({ success: false, message: "URL not provided" });
 
-    const id = uuidv4();
-    const result = await downloadWithYtdlp({ id, url, format });
+  const command = `yt-dlp -f best --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -o - "${url}"`;
 
-    if (!result.success) return res.json(result);
+  exec(command, { maxBuffer: 1024 * 1024 * 50 }, (err, stdout, stderr) => {
+    if (err || stderr.includes("ERROR")) {
+      return res.json({
+        success: false,
+        message: "Download failed",
+        debug: stderr
+      });
+    }
 
-    const base = process.env.APP_URL || `http://localhost:${process.env.PORT || 3000}`;
-    return res.json({
+    res.json({
       success: true,
-      filename: result.filename,
-      filesize: result.filesize,
-      url: `${base}/downloads/${result.filename}`
+      message: "Download success",
+      data: "Video ready to download"
     });
-
-  } catch (e) {
-    return res.json({ success: false, message: e.message });
-  }
+  });
 });
 
-app.listen(3000, () => console.log("RUNNING PORT 3000"));
+// Serve index.html
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.listen(PORT, () => console.log("Server running on port", PORT));
