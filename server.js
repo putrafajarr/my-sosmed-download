@@ -151,4 +151,4 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => console.log("Server jalan di po
+app.listen(PORT, () => console.log("Server jalan di port", PORT));
