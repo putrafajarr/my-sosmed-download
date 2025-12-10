@@ -1,7 +1,9 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const bodyParser = require("body-parser");
 const { exec } = require("child_process");
+const { v4: uuidv4 } = require("uuid");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +22,7 @@ app.post("/api/info", (req, res) => {
 
   const cmd = `yt-dlp -J --user-agent "Mozilla/5.0" "${url}"`;
 
-  exec(cmd, { maxBuffer: 1024 * 1024 * 200 }, (err, stdout, stderr) => {
+  exec(cmd, { maxBuffer: 1024 * 1024 * 300 }, (err, stdout, stderr) => {
     if (err || stderr.includes("ERROR")) {
       return res.json({
         success: false,
@@ -31,7 +33,6 @@ app.post("/api/info", (req, res) => {
 
     const info = JSON.parse(stdout);
 
-    // Ambil daftar resolusi (opsional)
     const formats = info.formats
       .filter(f => f.height)
       .map(f => ({
@@ -50,56 +51,72 @@ app.post("/api/info", (req, res) => {
 
 /*
 ========================================
-  DOWNLOAD MP4 (AMAN UNTUK SEMUA DEVICE)
+  DOWNLOAD MP4 (100% PLAYABLE FIX)
 ========================================
 */
-app.get("/download", (req, res) => {
+app.get("/download", async (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.send("URL tidak ditemukan");
 
-  // Format aman secara universal: MP4, H.264, AAC
+  // File sementara untuk hasil download
+  const filename = uuidv4() + ".mp4";
+  const filepath = path.join(__dirname, filename);
+
+  // Format aman: H.264 + AAC (universal playable)
   const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" \
-    --merge-output-format mp4 \
-    --user-agent "Mozilla/5.0" \
-    -o - "${videoUrl}"`;
+  --merge-output-format mp4 \
+  --user-agent "Mozilla/5.0" \
+  -o "${filepath}" "${videoUrl}"`;
 
-  res.setHeader("Content-Type", "video/mp4");
-  res.setHeader("Content-Disposition", "attachment; filename=video.mp4");
+  exec(command, { maxBuffer: 1024 * 1024 * 500 }, (err, stdout, stderr) => {
+    if (err || stderr.includes("ERROR")) {
+      console.log("Download Error:", stderr);
+      return res.send("Gagal download video");
+    }
 
-  const child = exec(command, { maxBuffer: 1024 * 1024 * 300 });
-  child.stdout.pipe(res);
-
-  child.stderr.on("data", (data) => {
-    console.log("Download Error:", data.toString());
+    // Kirim file ke user
+    res.download(filepath, "video.mp4", () => {
+      // Hapus file setelah dikirim
+      fs.unlink(filepath, () => {});
+    });
   });
 });
 
 /*
 ========================================
-  DOWNLOAD MP3 SAJA
+  DOWNLOAD MP3
 ========================================
 */
 app.get("/download-mp3", (req, res) => {
-  const { url } = req.query;
-  if (!url) return res.send("URL tidak ditemukan");
+  const videoUrl = req.query.url;
+  if (!videoUrl) return res.send("URL tidak ditemukan");
+
+  const filename = uuidv4() + ".mp3";
+  const filepath = path.join(__dirname, filename);
 
   const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 \
-    --user-agent "Mozilla/5.0" -o - "${url}"`;
+  --user-agent "Mozilla/5.0" \
+  -o "${filepath}" "${videoUrl}"`;
 
-  res.setHeader("Content-Type", "audio/mpeg");
-  res.setHeader("Content-Disposition", "attachment; filename=audio.mp3");
+  exec(command, { maxBuffer: 1024 * 1024 * 300 }, (err, stdout, stderr) => {
+    if (err || stderr.includes("ERROR")) {
+      console.log("MP3 Error:", stderr);
+      return res.send("Gagal download mp3");
+    }
 
-  const child = exec(command, { maxBuffer: 1024 * 1024 * 200 });
-  child.stdout.pipe(res);
+    res.download(filepath, "audio.mp3", () => {
+      fs.unlink(filepath, () => {});
+    });
+  });
 });
 
 /*
 ========================================
-  LOAD HALAMAN HTML
+  SERVE FRONTEND
 ========================================
 */
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => console.log("Server running on port", PORT));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
