@@ -13,7 +13,7 @@ app.use(express.static("public"));
 
 /*
 ========================================
-   API AMBIL INFO VIDEO (ANTI DOBEL)
+  API AMBIL INFO VIDEO + UNLIMITED FOTO
 ========================================
 */
 app.post("/api/info", (req, res) => {
@@ -22,59 +22,62 @@ app.post("/api/info", (req, res) => {
 
   const cmd = `yt-dlp -J --user-agent "Mozilla/5.0" "${url}"`;
 
-  exec(cmd, { maxBuffer: 1024 * 1024 * 300 }, (err, stdout, stderr) => {
+  exec(cmd, { maxBuffer: 1024 * 1024 * 500 }, (err, stdout, stderr) => {
     if (err || stderr.includes("ERROR")) {
       return res.json({
         success: false,
-        message: "Gagal ambil info video",
+        message: "Gagal ambil info",
         debug: stderr
       });
     }
 
     const info = JSON.parse(stdout);
 
-    // Anti resolusi dobel
+    // Resolusi (anti dobel)
     const uniqueFormats = {};
     info.formats.forEach(f => {
       if (f.height && !uniqueFormats[f.height]) {
-        uniqueFormats[f.height] = {
-          resolution: f.height + "p"
-        };
+        uniqueFormats[f.height] = { resolution: f.height + "p" };
       }
     });
 
     const formats = Object.values(uniqueFormats);
 
+    // FOTO UNLIMITED (ambil semua thumbnails dari yt-dlp)
+    const images = (info.thumbnails || [])
+      .map(t => t.url)
+      .filter(Boolean); // tidak pakai slice → unlimited
+
     res.json({
       success: true,
       title: info.title,
       thumbnail: info.thumbnail,
-      formats: formats
+      formats: formats,
+      images: images   // <<< unlimited photo list
     });
   });
 });
 
 /*
 ========================================
-   DOWNLOAD MP4 (FINAL PLAYABLE FIX)
+  DOWNLOAD MP4 (H.264 + AAC)
 ========================================
 */
-app.get("/download", async (req, res) => {
+app.get("/download", (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.send("URL tidak ditemukan");
 
   const filename = uuidv4() + ".mp4";
   const filepath = path.join(__dirname, filename);
 
-  // Format aman untuk SEMUA sosmed (TikTok, IG, FB, YT)
   const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" \
   --merge-output-format mp4 \
   --user-agent "Mozilla/5.0" \
   -o "${filepath}" "${videoUrl}"`;
 
   exec(command, { maxBuffer: 1024 * 1024 * 500 }, (err, stdout, stderr) => {
-    if (err || stderr.includes("ERROR")) {
-      console.log("Download Error:", stderr);
+    if (err) {
+      console.log(stderr);
       return res.send("Gagal download video");
     }
 
@@ -86,7 +89,7 @@ app.get("/download", async (req, res) => {
 
 /*
 ========================================
-   DOWNLOAD MP3 (AMAN)
+  DOWNLOAD MP3
 ========================================
 */
 app.get("/download-mp3", (req, res) => {
@@ -100,12 +103,7 @@ app.get("/download-mp3", (req, res) => {
   --user-agent "Mozilla/5.0" \
   -o "${filepath}" "${videoUrl}"`;
 
-  exec(command, { maxBuffer: 1024 * 1024 * 300 }, (err, stdout, stderr) => {
-    if (err || stderr.includes("ERROR")) {
-      console.log("MP3 Error:", stderr);
-      return res.send("Gagal download mp3");
-    }
-
+  exec(command, { maxBuffer: 1024 * 1024 * 300 }, () => {
     res.download(filepath, "audio.mp3", () => {
       fs.unlink(filepath, () => {});
     });
@@ -114,7 +112,7 @@ app.get("/download-mp3", (req, res) => {
 
 /*
 ========================================
-   LOAD UI
+  LOAD UI
 ========================================
 */
 app.get("*", (req, res) => {
