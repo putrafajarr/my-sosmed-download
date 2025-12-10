@@ -13,7 +13,7 @@ app.use(express.static("public"));
 
 /*
 ========================================
-  API AMBIL INFO VIDEO
+  API AMBIL INFO VIDEO (ANTI RESOLUSI DOBEL)
 ========================================
 */
 app.post("/api/info", (req, res) => {
@@ -33,18 +33,26 @@ app.post("/api/info", (req, res) => {
 
     const info = JSON.parse(stdout);
 
-    const formats = info.formats
-      .filter(f => f.height)
-      .map(f => ({
-        resolution: f.height + "p",
-        format_id: f.format_id
-      }));
+    // -------------------------
+    // ANTI RESOLUSI DOBEL
+    // -------------------------
+    const uniqueFormats = {};
+    info.formats.forEach(f => {
+      if (f.height && !uniqueFormats[f.height]) {
+        uniqueFormats[f.height] = {
+          resolution: f.height + "p",
+          format_id: f.format_id
+        };
+      }
+    });
+
+    const formats = Object.values(uniqueFormats);
 
     res.json({
       success: true,
       title: info.title,
       thumbnail: info.thumbnail,
-      formats: formats
+      formats: formats   // Sudah bersih, tanpa dobel
     });
   });
 });
@@ -58,11 +66,10 @@ app.get("/download", async (req, res) => {
   const videoUrl = req.query.url;
   if (!videoUrl) return res.send("URL tidak ditemukan");
 
-  // File sementara untuk hasil download
   const filename = uuidv4() + ".mp4";
   const filepath = path.join(__dirname, filename);
 
-  // Format aman: H.264 + AAC (universal playable)
+  // Format aman: H.264 + AAC → PLAYABLE DI SEMUA DEVICE
   const command = `yt-dlp -f "bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4" \
   --merge-output-format mp4 \
   --user-agent "Mozilla/5.0" \
@@ -74,10 +81,8 @@ app.get("/download", async (req, res) => {
       return res.send("Gagal download video");
     }
 
-    // Kirim file ke user
     res.download(filepath, "video.mp4", () => {
-      // Hapus file setelah dikirim
-      fs.unlink(filepath, () => {});
+      fs.unlink(filepath, () => {}); // hapus file setelah dikirim
     });
   });
 });
@@ -112,7 +117,7 @@ app.get("/download-mp3", (req, res) => {
 
 /*
 ========================================
-  SERVE FRONTEND
+  LOAD HALAMAN HTML
 ========================================
 */
 app.get("*", (req, res) => {
