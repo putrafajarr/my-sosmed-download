@@ -1,108 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Sosmed Downloader PRO</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<meta charset="UTF-8">
+<title>Sosmed Downloader PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <style>
-    body {
-      background: radial-gradient(circle at top, #1a1a1a, #000);
-      color: white;
-      font-family: "Poppins", sans-serif;
-    }
-
-    .glass-box {
-      backdrop-filter: blur(12px);
-      background: rgba(255, 255, 255, 0.05);
-      padding: 25px;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.15);
-      box-shadow: 0 0 25px rgba(0,0,0,0.5);
-    }
-
-    .thumb {
-      width: 100%;
-      border-radius: 12px;
-      margin-top: 15px;
-    }
-
-    .btn-custom {
-      padding: 12px;
-      border-radius: 12px;
-      font-weight: 600;
-      margin-top: 10px;
-    }
-
-    .btn-mp4 { background: #28a745; border: none; }
-    .btn-mp3 { background: #ffbe0b; border: none; color: black; }
-
-    .loader {
-      width: 45px;
-      height: 45px;
-      border: 4px solid rgba(255,255,255,0.2);
-      border-top-color: #0d6efd;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 15px auto;
-      display: none;
-    }
-
-    @keyframes spin {
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+<style>
+body {
+  background: radial-gradient(circle at top, #1a1a1a, #000);
+  color: white;
+  font-family: "Poppins", sans-serif;
+}
+.glass-box {
+  backdrop-filter: blur(12px);
+  background: rgba(255,255,255,0.06);
+  padding: 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 0 25px rgba(0,0,0,0.5);
+}
+.thumb {
+  width: 100%;
+  border-radius: 12px;
+}
+.mini-thumb {
+  width: 100%;
+  border-radius: 10px;
+}
+.img-box {
+  padding: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+.btn-custom {
+  padding: 12px;
+  border-radius: 12px;
+  margin-top: 10px;
+  font-weight: 600;
+}
+.btn-mp4  { background:#28a745; border:none; }
+.btn-mp3  { background:#ffbe0b; border:none; color:black; }
+.btn-imgs { background:#6f42c1; border:none; }
+</style>
 </head>
 
 <body>
 
 <div class="container py-5">
 
-  <h2 class="text-center fw-bold mb-4">
-    🔥 Sosmed Downloader <span class="text-primary">Fajar</span>
-  </h2>
+<h2 class="text-center fw-bold mb-4">🔥 Sosmed Downloader <span class="text-primary">PRO</span></h2>
 
-  <!-- INPUT BOX -->
-  <div class="glass-box mb-4">
-    <label class="fw-bold fs-5 mb-2">Tempelkan Link Video:</label>
-    <input id="url" class="form-control form-control-lg" placeholder="https://tiktok.com/...">
+<div class="glass-box mb-4">
+  <label class="fw-bold fs-5">Tempelkan Link Post / Video:</label>
+  <input id="url" class="form-control form-control-lg" placeholder="https://tiktok.com/...">
 
-    <button class="btn btn-primary btn-lg w-100 mt-3" onclick="getInfo()">
-      🎯 Ambil Info Video
+  <button class="btn btn-primary btn-lg w-100 mt-3" onclick="getInfo()">🎯 Ambil Info</button>
+  <div id="loader" class="text-center mt-3" style="display:none;">⏳ Loading...</div>
+</div>
+
+<div id="result" style="display:none;">
+  <div class="glass-box">
+
+    <img id="thumb" class="thumb">
+    <h4 class="fw-bold mt-3" id="title"></h4>
+
+    <hr>
+
+    <label class="fw-bold">Resolusi Video:</label>
+    <select id="resolution" class="form-select mt-2 mb-3"></select>
+
+    <button class="btn btn-custom btn-mp4 w-100" onclick="downloadMP4()">▶️ Download MP4</button>
+    <button class="btn btn-custom btn-mp3 w-100" onclick="downloadMP3()">🎵 Download MP3</button>
+
+    <hr>
+
+    <h5 class="fw-bold">Foto Slide (Unlimited):</h5>
+
+    <div id="images-wrapper" class="row g-2"></div>
+
+    <button class="btn btn-custom btn-imgs w-100 mt-3" onclick="downloadSelectedImages()">
+      🖼️ Download Foto Terpilih
     </button>
 
-    <div id="loader" class="loader"></div>
   </div>
-
-  <!-- RESULT -->
-  <div id="result" style="display:none;">
-    <div class="glass-box text-center">
-
-      <img id="thumb" class="thumb">
-
-      <h4 class="fw-bold mt-3" id="title"></h4>
-
-      <label class="fw-bold mt-3">Resolusi Video:</label>
-      <select id="resolution" class="form-select mt-2"></select>
-
-      <button class="btn btn-custom btn-mp4 w-100" onclick="downloadMP4()">
-        ▶️ Download MP4
-      </button>
-
-      <button class="btn btn-custom btn-mp3 w-100" onclick="downloadMP3()">
-        🎵 Download MP3
-      </button>
-
-    </div>
-  </div>
+</div>
 
 </div>
 
 <script>
 let selectedURL = "";
+let currentImages = [];
 
-// AMBIL INFO VIDEO
 async function getInfo() {
   const url = document.getElementById("url").value;
   selectedURL = url;
@@ -113,39 +103,70 @@ async function getInfo() {
 
   let res = await fetch("/api/info", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type":"application/json" },
     body: JSON.stringify({ url })
   });
 
   document.getElementById("loader").style.display = "none";
 
   let data = await res.json();
-
   if (!data.success) return alert(data.message);
 
   document.getElementById("thumb").src = data.thumbnail;
   document.getElementById("title").innerText = data.title;
 
-  let select = document.getElementById("resolution");
-  select.innerHTML = "";
-
+  // Resolusi
+  let reso = document.getElementById("resolution");
+  reso.innerHTML = "";
   data.formats.forEach(f => {
-    let opt = document.createElement("option");
-    opt.textContent = f.resolution;
-    select.appendChild(opt);
+    let o = document.createElement("option");
+    o.textContent = f.resolution;
+    reso.appendChild(o);
+  });
+
+  // FOTO UNLIMITED
+  currentImages = data.images || [];
+  let wrap = document.getElementById("images-wrapper");
+  wrap.innerHTML = "";
+
+  currentImages.forEach((imgUrl, idx) => {
+    let col = document.createElement("div");
+    col.className = "col-6 col-md-3";
+
+    col.innerHTML = `
+      <div class="img-box text-center">
+        <img src="${imgUrl}" class="mini-thumb">
+        <input type="checkbox" value="${imgUrl}" class="form-check-input mt-1">
+      </div>
+    `;
+
+    wrap.appendChild(col);
   });
 
   document.getElementById("result").style.display = "block";
 }
 
-// DOWNLOAD MP4 (backend auto pilih format terbaik)
 function downloadMP4() {
   window.open(`/download?url=${encodeURIComponent(selectedURL)}`, "_blank");
 }
 
-// DOWNLOAD MP3
 function downloadMP3() {
   window.open(`/download-mp3?url=${encodeURIComponent(selectedURL)}`, "_blank");
+}
+
+function downloadSelectedImages() {
+  const selected = [...document.querySelectorAll("input[type='checkbox']:checked")];
+
+  if (!selected.length) return alert("Pilih minimal 1 foto dulu bang!");
+
+  selected.forEach(cb => {
+    let a = document.createElement("a");
+    a.href = cb.value;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
 }
 </script>
 
